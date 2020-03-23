@@ -107,7 +107,7 @@ You can start working with this straight away with our [scaffolding][].
   - [This project is too opinionated, but can I question any of those opinions?](#this-project-is-too-opinionated-but-can-i-question-any-of-those-opinions)
   - [What's this `hooks` folder here?](#whats-this-hooks-folder-here)
   - [Can I have my own scaffolding?](#can-i-have-my-own-scaffolding)
-  - [Can I skip the `-f .yaml` part for `docker-compose` commands?](#can-i-skip-the--f-yaml-part-for-docker-compose-commands)
+  - [Can I skip the `-f docker-compose.yaml -f .yaml` part for `docker-compose` commands?](#can-i-skip-the--f-docker-composeyaml--f-yaml-part-for-docker-compose-commands)
   - [How can I pin an image version?](#how-can-i-pin-an-image-version)
   - [How to get proper assets when printing reports?](#how-to-get-proper-assets-when-printing-reports)
   - [How to change report fonts?](#how-to-change-report-fonts)
@@ -565,7 +565,7 @@ If you use the official [scaffolding][], you can boot it in ptvsd mode with:
 
 ```bash
 export DOODBA_PTVSD_ENABLE=1
-docker-compose -f devel.yaml up -d
+docker-compose -f docker-compose.yaml -f devel.yaml up -d
 ```
 
 Of course, you need to have properly configured your [VSCode][]. To do so, make sure in
@@ -732,7 +732,7 @@ Then run these Bash commands:
 ```bash
 git clone https://github.com/Tecnativa/doodba-scaffolding.git myproject
 cd myproject
-ln -s devel.yaml docker-compose.yml
+ln -s devel.yaml docker-compose.override.yml
 chmod -R ug+rwX odoo/auto
 export UID GID="$(id -g $USER)" UMASK="$(umask)"
 docker-compose build --pull
@@ -773,7 +773,7 @@ Set it up with:
 
 Once finished, you can start using Odoo with:
 
-    docker-compose -f devel.yaml up --build
+    docker-compose -f docker-compose.yaml -f devel.yaml up --build
 
 This allows you to track only what Git needs to track and provides faster Docker builds.
 
@@ -965,7 +965,7 @@ This allows you to:
 Once you fixed everything needed and started
 [global inverse proxy](#global-inverse-proxy), run the production environment with:
 
-    docker-compose -f prod.yaml up --build --remove-orphans
+    docker-compose -f docker-compose.yaml -f prod.yaml up --build --remove-orphans
 
 ###### Backups
 
@@ -1035,7 +1035,7 @@ environment.
 
 Test it in your machine with:
 
-    docker-compose -f test.yaml up --build
+    docker-compose -f docker-compose.yaml -f test.yaml up --build
 
 ###### Global whitelist
 
@@ -1140,8 +1140,8 @@ services:
 
 #### Other usage scenarios
 
-In examples below I will skip the `-f <environment>.yaml` part and assume you know which
-environment you want to use.
+In examples below I will skip the `-f docker-compose.yaml -f <environment>.yaml` part
+and assume you know which environment you want to use.
 
 Also, we recommend to use `run` subcommand to create a new container with same settings
 and volumes. Sometimes you may prefer to use `exec` instead, to execute an arbitrary
@@ -1407,19 +1407,19 @@ You probably **should**, and rebase on our updates. However, if you are planning
 general update to it that you find interesting for the general-purpose one, please send
 us a pull request.
 
-### Can I skip the `-f <environment>.yaml` part for `docker-compose` commands?
+### Can I skip the `-f docker-compose.yaml -f <environment>.yaml` part for `docker-compose` commands?
 
 Let's suppose you want to use [`test.yaml`][testing] environment by default, no matter
 where you clone the project:
 
-    ln -s test.yaml docker-compose.yaml
-    git add docker-compose.yaml
+    ln -s test.yaml docker-compose.override.yaml
+    git add docker-compose.override.yaml
     git commit
 
 Let's suppose you only want to use `devel.yaml` in your local development machine by
 default:
 
-    ln -s devel.yaml docker-compose.yml
+    ln -s devel.yaml docker-compose.override.yml
 
 Notice the difference in the prefix (`.yaml` vs. `.yml`). Docker Compose will use the
 `.yml` one if both are found, so that's the one we considered you should use in your
