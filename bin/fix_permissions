@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -e
+# find all files where group or user are not odoo that are not a symlink, and fix permissions for those
+# we use find and xargs because chown -R can be very slow on certain systems: https://github.com/docker/for-linux/issues/388
+find /opt/odoo \( -not -user root -or -not -group odoo \) -and -not -type l -print0 | xargs -0 --no-run-if-empty chown root:odoo
+find /opt/odoo \( -type d -not -perm u=rwx,g=rx,o= \) -o \( -type f -not -perm u=rw,g=r,o= -not -perm u=rwx,g=rx,o= \) -print0 | xargs -0 --no-run-if-empty chmod u+rwX,g+rX-w,o=
+
+chmod -R g+w /opt/odoo/auto
+
+if [ -d /opt/odoo/custom/ssh ]; then
+    chmod -R u=rwX,go= /opt/odoo/custom/ssh
+fi
+if [ -d ~odoo/.ssh ]; then
+    chown -R odoo:odoo ~odoo/.ssh
+    chmod -R u=rwX,go= ~odoo/.ssh
+fi

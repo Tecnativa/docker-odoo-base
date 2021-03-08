@@ -1,9 +1,21 @@
 #!/bin/bash
 set -e
 
+# TODO those are needed to dev mode and should ideally be moved somewhere else (and only enabled for dev / non AGGREGATE builds)
+# TODO also add a test for dev mode / non AGGREGATE builds having the correct permissions for running autoaggregate
+# make sure odoo has a user.name configured, as merges would not succeed otherwise (even if GIT_AUTHOR_NAME and EMAIL are set and should be used)
+su --shell="$SHELL" odoo -c 'git config user.name 1>/dev/null || git config --global user.name "'"$GIT_AUTHOR_NAME"'"'
+# symlink ssh directory for odoo user as well (gitaggregate is now run as odoo user)
+if [[ ! -e ~odoo/.ssh ]] ; then
+    cp -a /opt/odoo/custom/ssh ~odoo/.ssh
+fi
+
 if [ "$AGGREGATE" != true ]; then
     log WARNING Not aggregating code repositories
     exit 0
 fi
 
+# during build checkout sources for root:odoo
+# to checkout sources as odoo:odoo set AGGREGATE to false for build and execute autoaggregate during runtime
+export UID=0 GID=$GID UMASK=0027
 exec autoaggregate

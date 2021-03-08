@@ -157,6 +157,18 @@ LABEL org.label-schema.schema-version="$VERSION" \
 # Onbuild version, with all the magic
 FROM base AS onbuild
 
+# Enable setting custom uids for odoo user during build of scaffolds
+ONBUILD ARG UID=1000
+ONBUILD ARG GID=1000
+
+# Enable Odoo user and filestore
+ONBUILD RUN groupadd -g $GID odoo -o \
+    && useradd -l -md /home/odoo -s /bin/false -u $UID -g $GID odoo \
+    && mkdir -p /var/lib/odoo \
+    && chown -R odoo:odoo /var/lib/odoo /qa/artifacts \
+    && chmod a=rwX /qa/artifacts \
+    && sync
+
 # Subimage triggers
 ONBUILD ENTRYPOINT ["/opt/odoo/common/entrypoint"]
 ONBUILD CMD ["/usr/local/bin/odoo"]
@@ -205,19 +217,8 @@ ONBUILD ENV ADMIN_PASSWORD="$ADMIN_PASSWORD" \
             EMAIL_FROM="$EMAIL_FROM" \
             WITHOUT_DEMO="$WITHOUT_DEMO"
 ONBUILD ARG LOCAL_CUSTOM_DIR=./custom
-ONBUILD COPY $LOCAL_CUSTOM_DIR /opt/odoo/custom
-
-# Enable setting custom uids for odoo user during build of scaffolds
-ONBUILD ARG UID=1000
-ONBUILD ARG GID=1000
-
-# Enable Odoo user and filestore
-ONBUILD RUN groupadd -g $GID odoo -o \
-    && useradd -l -md /home/odoo -s /bin/false -u $UID -g $GID odoo \
-    && mkdir -p /var/lib/odoo \
-    && chown -R odoo:odoo /var/lib/odoo /qa/artifacts \
-    && chmod a=rwX /qa/artifacts \
-    && sync
+ONBUILD COPY --chown=odoo:odoo $LOCAL_CUSTOM_DIR /opt/odoo/custom
+ONBUILD RUN fix_permissions
 
 # https://docs.python.org/3/library/logging.html#levels
 ONBUILD ARG LOG_LEVEL=INFO
