@@ -33,15 +33,16 @@ jobs:
       fail-fast: false
       matrix:
         # Test modern Odoo versions with latest Postgres version
-        pg_version: ["12"]
+        pg_version: ["13"]
         odoo_version:
           - "14.0"
           - "13.0"
           - "12.0"
           - "11.0"
-          - "10.0"
         # Test older Odoo versions with older Postgres versions
         include:
+          - odoo_version: "10.0"
+            pg_version: "12"
           - odoo_version: "9.0"
             pg_version: "11"
           - odoo_version: "8.0"
