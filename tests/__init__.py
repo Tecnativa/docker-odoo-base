@@ -615,6 +615,30 @@ class ScaffoldingCase(unittest.TestCase):
                 ),
             )
 
+    def test_repo_merge(self):
+        symlink_dir = join(SCAFFOLDINGS_DIR, "repo_merge")
+        for sub_env in matrix():
+            self.compose_test(
+                symlink_dir,
+                sub_env,
+                (
+                    "git",
+                    "--git-dir=/opt/odoo/custom/src/odoo/.git",
+                    "--no-pager",
+                    "log",
+                    "-n",
+                    "2",
+                ),
+                # make sure the git log contains a merge commit signed by $GIT_AUTHOR_NAME (otherwise ff was enabled
+                # and we did not test the merge commits)
+                (
+                    "bash",
+                    "-c",
+                    "git --git-dir=/opt/odoo/custom/src/odoo/.git log -n 1"
+                    " | grep 'docker-odoo <https://hub.docker.com/r/tecnativa/odoo>'",
+                ),
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
