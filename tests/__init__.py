@@ -639,6 +639,18 @@ class ScaffoldingCase(unittest.TestCase):
                 ),
             )
 
+    def test_aggregate_permissions(self):
+        symlink_dir = join(SCAFFOLDINGS_DIR, "aggregate_permissions")
+        for sub_env in matrix():
+            self.compose_test(
+                symlink_dir,
+                sub_env,
+                ("autoaggregate",),
+                # test that permissions are set in a way that enables a second autoaggregation after the first one
+                # e.g. when used in dev we update the source code sometimes/daily
+                ("autoaggregate",),
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
