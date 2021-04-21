@@ -10,7 +10,6 @@ from doodbalib import (
     ADDONS_YAML,
     AUTO_REPOS_YAML,
     CORE,
-    LOG_LEVELS,
     ODOO_DIR,
     PRIVATE,
     REPOS_YAML,
@@ -18,7 +17,9 @@ from doodbalib import (
     logger,
 )
 
-UMASK = os.environ.get("UMASK")
+# if the umask matches the `chmod -R u+rwX,g+rX-w,o= /opt/odoo` command the build is faster as we don't need to fix as
+# many permissions after auto aggregation
+UMASK = os.environ.get("UMASK") or "0027"
 UID = int(os.environ.get("UID") or -1)
 GID = int(os.environ.get("GID") or -1)
 DEFAULT_REPO_PATTERN = os.environ.get("DEFAULT_REPO_PATTERN")
@@ -33,47 +34,61 @@ def aggregate(config):
         Path where to find the ``repos.yaml`` file.
     """
     logger.info("Running gitaggregate with %s", config)
-    old_umask = None
-    try:
-        # Download git code with the specified umask, if any
-        if UMASK:
-            old_umask = os.umask(int(UMASK))
-        check_call(
-            [
-                "gitaggregate",
-                "--expand-env",
-                "--config",
-                config,
-                "--log-level",
-                log_level,
-                "--jobs",
-                str(cpu_count() or 1),
-                "aggregate",
-            ],
-            cwd=SRC_DIR,
-            stderr=sys.stderr,
-            stdout=sys.stdout,
-        )
-    finally:
-        # Restore umask, if changed
-        if old_umask is not None:
-            os.umask(old_umask)
-        # Chown recursively, if UID or GID are specified
-        if ~UID or ~GID:
-            for root, dirs, files in os.walk(SRC_DIR):
-                for target in dirs + files:
-                    try:
-                        target_path = os.path.join(root, target)
-                        if not os.path.islink(target_path):
-                            # if target_path is a link we would only chown the
-                            # target, as the target should be chowned separately
-                            # we can skip all symlinks and prevent showing
-                            # unclear errors
-                            os.chown(target_path, UID, GID)
-                    except Exception:
-                        logger.debug(
-                            "Error trying to chown on file. Skipping...", exc_info=True
-                        )
+    pre_execs = []
+
+    def pre_exec():
+        for _exec in pre_execs:
+            try:
+                _exec()
+            except Exception as e:
+                logger.error("Error in %s: %s" % (_exec, e))
+                logger.exception(e)
+                raise
+
+    if UMASK:
+
+        def pre_exec_umask():
+            # Download git code with the specified umask, if any
+            os.umask(int(UMASK, 8))
+
+        pre_execs.append(pre_exec_umask)
+
+    if ~GID:
+
+        def pre_exec_gid():
+            # execute git with GID
+            os.setgid(GID)
+
+        pre_execs.append(pre_exec_gid)
+
+    if ~UID:
+
+        def pre_exec_uid():
+            # execute git with UID
+            os.setuid(UID)
+            # set odoo home directory
+            # (git checks if user has a config in $HOME, and we cannot read /root as odoo user)
+            os.environ["HOME"] = "/home/odoo"
+
+        pre_execs.append(pre_exec_uid)
+
+    check_call(
+        [
+            "gitaggregate",
+            "--expand-env",
+            "--config",
+            config,
+            "--log-level",
+            log_level,
+            "--jobs",
+            str(cpu_count() or 1),
+            "aggregate",
+        ],
+        cwd=SRC_DIR,
+        stderr=sys.stderr,
+        stdout=sys.stdout,
+        preexec_fn=pre_exec,
+    )
 
 
 def origin_for(

@@ -1,0 +1,25 @@
+version: "2.1"
+services:
+  odoo:
+    build:
+      context: ./
+      args:
+        AGGREGATE: "false"
+        CLEAN: "false"
+        COMPILE: "false"
+        ODOO_VERSION: $ODOO_MINOR
+        PIP_INSTALL_ODOO: "false"
+    environment:
+      PYTHONOPTIMIZE: ""
+      UNACCENT: "false"
+      UID: "${UID:-1000}"
+      GID: "${GID:-1000}"
+      UMASK: "$UMASK"
+    user: root
+    entrypoint: "" # we are calling autoaggregate inside of the tests
+    volumes:
+      - ./custom/src/:/opt/odoo/custom/src:rw,z
+      - filestore:/var/lib/odoo:z
+
+volumes:
+  filestore:

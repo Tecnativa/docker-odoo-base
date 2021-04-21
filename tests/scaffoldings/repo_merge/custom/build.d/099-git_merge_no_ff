@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+# configure git for odoo to merge without fast forward to test config for merge commits in autoaggregate
+su --shell="$SHELL" odoo -c 'git config --global merge.ff false'
+su --shell="$SHELL" odoo -c 'git config --global pull.ff false'
+
+# prepare a forced merge by using an OCB version that is one commit behind the ODOO_VERSION branch
+OCB_VERSION_ONE_BEHIND=$(curl -s "https://api.github.com/repos/OCA/OCB/commits?page=2&per_page=1&sha=$ODOO_VERSION" | python -c 'import json, sys; print(json.loads("".join([l for l in sys.stdin]))[0]["sha"])')
+# shellcheck disable=SC2016
+sed -i 's/\$ODOO_VERSION^1/'"$OCB_VERSION_ONE_BEHIND"'/' /opt/odoo/custom/src/repos.yaml
