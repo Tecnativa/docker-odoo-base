@@ -437,6 +437,9 @@ It will be full of symlinks to the addons you selected in [`addons.yaml`][].
 
 #### `/opt/odoo/auto/odoo.conf`
 
+> :warning: **Deprecated**: Configuration file is now generated via environment
+variables set as such `$ODOO_CFG_{ODOO_CFG_PARAMETER}`
+
 It will have the result of merging all configurations under
 `/opt/odoo/{common,custom}/conf.d/`, in that order.
 

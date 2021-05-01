@@ -3,10 +3,11 @@
 """Generate Odoo server configuration from templates"""
 
 import os
+import sys
 from contextlib import closing
 from string import Template
 
-from doodbalib import logger
+from doodbalib import logger, ODOO_DIR
 
 try:
     # Python 2, where io.StringIO fails because it is unicode-only
@@ -15,11 +16,18 @@ except ImportError:
     from io import StringIO
 
 try:
+    from odoo.tools.config import configmanager
+except ImportError:
+    # For non-pip installations
+    sys.path.append(ODOO_DIR)
+    from odoo.tools.config import configmanager
+
+try:
     from configparser import RawConfigParser
 
     parser = RawConfigParser(strict=False)
 except ImportError:
-    # Python 2, where strict=True doesn't exist
+    # Python 2, where strict=True doesn"t exist
     from ConfigParser import RawConfigParser
 
     parser = RawConfigParser()
@@ -27,9 +35,8 @@ except ImportError:
 ODOO_VERSION = os.environ.get("ODOO_VERSION")
 TARGET_FILE = os.environ.get("ODOO_RC", "/opt/odoo/auto/odoo.conf")
 CONFIG_DIRS = ("/opt/odoo/common/conf.d", "/opt/odoo/custom/conf.d")
-CONFIG_FILES = []
 
-# Read all configuraiton files found in those folders
+# Read all configuration files found in those folders
 logger.info("Merging found configuration files in %s", TARGET_FILE)
 for dir_ in CONFIG_DIRS:
     try:
@@ -37,6 +44,25 @@ for dir_ in CONFIG_DIRS:
             parser.read(os.path.join(dir_, file_))
     except OSError:  # TODO Use FileNotFoundError when we drop python 2
         continue
+
+
+# Add configuration parameters sent via env vars
+logger.info("Updating configuration file with set environment variables")
+odoo_cfg = configmanager()
+cfg_env_prefix = "ODOO_CFG_"
+
+for k, val in os.environ.items():
+    if not val or not k.startswith(cfg_env_prefix):
+        continue
+
+    parameter = k.split(cfg_env_prefix)[1].lower()
+    if parameter in odoo_cfg.options:
+        parser.set("options", parameter, val)
+
+# Warn user about all invalid parameters
+invalid_params = set(parser.options) - set(odoo_cfg.options)
+for param in invalid_params:
+    logger.warning("'%s' is not a valid Odoo configuration parameter")
 
 # Write it to a memory string object
 with closing(StringIO()) as resultfp:
